@@ -1,0 +1,6 @@
+_build/
+/.moon/
+/.mooncakes/
+/target/
+/output/
+/examples/chinook/Chinook_PostgreSql.sql

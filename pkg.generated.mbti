@@ -1,0 +1,119 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jhshuai/moonplanwatch"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn compare(Capture, Capture, Policy) -> Report
+
+pub fn decode_capture(String) -> Capture raise InputError
+
+pub fn decode_context(String) -> Context raise InputError
+
+pub fn decode_policy(String) -> Policy raise InputError
+
+pub fn evaluate(Capture, Policy) -> Report
+
+pub fn read_plan(String, Context) -> Capture raise InputError
+
+// Errors
+#derive(@debug.Debug)
+pub(all) suberror InputError {
+  Invalid(Diagnostic)
+}
+pub fn InputError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) struct AccessRule {
+  relation : Relation
+  allow_sequential : Bool
+}
+
+pub struct Capture {
+  // private fields
+}
+pub fn Capture::context(Self) -> Context
+pub fn Capture::encode(Self) -> String
+pub fn Capture::limitations(Self) -> Array[Diagnostic]
+pub fn Capture::nodes(Self) -> Array[NodeInfo]
+pub fn Capture::source(Self) -> String
+
+#derive(Eq)
+pub struct Context {
+  // private fields
+}
+pub fn Context::equal(Self, Self) -> Bool
+pub fn Context::new(query_id~ : String, parameters_id~ : String, dataset_id~ : String, server_version~ : String, settings_id~ : String) -> Self raise InputError
+pub fn Context::not_equal(Self, Self) -> Bool
+pub fn Context::query_id(Self) -> String
+
+#derive(Eq, @debug.Debug)
+pub(all) struct Diagnostic {
+  code : String
+  path : String
+  message : String
+}
+pub fn Diagnostic::equal(Self, Self) -> Bool
+pub fn Diagnostic::not_equal(Self, Self) -> Bool
+pub fn Diagnostic::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) struct Finding {
+  kind : FindingKind
+  code : String
+  path : String
+  message : String
+}
+pub fn Finding::equal(Self, Self) -> Bool
+pub fn Finding::not_equal(Self, Self) -> Bool
+pub fn Finding::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) enum FindingKind {
+  Violation
+  Incomplete
+  Change
+}
+pub fn FindingKind::equal(Self, Self) -> Bool
+pub fn FindingKind::not_equal(Self, Self) -> Bool
+pub fn FindingKind::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) struct NodeInfo {
+  path : String
+  kind : String
+  relation : Relation?
+  index_name : String?
+}
+pub fn NodeInfo::equal(Self, Self) -> Bool
+pub fn NodeInfo::not_equal(Self, Self) -> Bool
+pub fn NodeInfo::to_repr(Self) -> @debug.Repr
+
+pub struct Policy {
+  // private fields
+}
+pub fn Policy::new(access? : Array[AccessRule], max_shared_reads? : UInt64, max_temp_writes? : UInt64, forbid_disk_sort? : Bool) -> Self raise InputError
+
+#derive(Eq, @debug.Debug)
+pub(all) struct Relation {
+  schema : String
+  name : String
+  table_alias : String
+}
+pub fn Relation::equal(Self, Self) -> Bool
+pub fn Relation::not_equal(Self, Self) -> Bool
+pub fn Relation::to_repr(Self) -> @debug.Repr
+
+pub struct Report {
+  // private fields
+}
+pub fn Report::exit_code(Self) -> Int32
+pub fn Report::findings(Self) -> Array[Finding]
+pub fn Report::to_json(Self) -> String
+pub fn Report::to_markdown(Self) -> String
+
+// Type aliases
+
+// Traits

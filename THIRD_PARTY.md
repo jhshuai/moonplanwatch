@@ -1,0 +1,34 @@
+# Sources, licenses and reuse
+
+Project code is licensed under Apache-2.0, copyright 2026 MoonPlanWatch contributors.
+
+| Source | Use | License / attribution |
+|---|---|---|
+| [MoonBit core](https://github.com/moonbitlang/core) bundled with 0.10.19+bee578715 | JSON, exact number representation, containers, UTF-8, async filesystem/process APIs | Apache-2.0; upstream distribution notices apply |
+| [MoonTestLedger cli/files.mbt at c85fee7](https://github.com/jhshuai/MoonTestLedger/blob/c85fee7045fb17a4e413327f57f84b99799e4692/cli/files.mbt) | Adapted bounded regular-file/strict-UTF-8 read algorithm in cli/commands.mbt | Apache-2.0; copyright 2026 MoonTestLedger contributors; original implementation is by the same GitHub owner |
+| [Chinook PostgreSQL SQL](https://github.com/lerocha/chinook-database/blob/7f67772503d71ba90f19283c38e93923addb43fa/ChinookDatabase/DataSources/Chinook_PostgreSql.sql) | Producer downloads the pinned public sample; committed plan output derives from its schema/data | Copyright 2008–2024 Luis Rocha; MIT-style upstream grant preserved verbatim in [LICENSE.chinook.md](examples/chinook/LICENSE.chinook.md) |
+| [PostgreSQL 18 EXPLAIN documentation](https://www.postgresql.org/docs/18/sql-explain.html), [using EXPLAIN](https://www.postgresql.org/docs/18/using-explain.html) | Behavioral reference: JSON, VERBOSE identity, ANALYZE execution, inclusive buffer counters | PostgreSQL documentation license; no documentation passages or server code copied into the implementation |
+
+Chinook pin: `7f67772503d71ba90f19283c38e93923addb43fa`, SQL header version
+1.4.5. Downloaded SQL SHA-256:
+`e3fde5c1a5b51a2a91429a702c9ca6e69ba56e6c7f5e112724d70c3d03db695e`.
+The SQL is downloaded at reproduction time and is not vendored. The unmodified
+upstream permission notice is vendored. Chinook combines music-library data with
+fictional people/generated sales; the fixtures are not customer production data.
+
+The committed plans were generated on 2026-11-05 from a dedicated loopback
+PostgreSQL 18.6 Windows x86-64 cluster (MSVC 19.44.35228), with locale C and UTF-8.
+Producer options and exact lookup SQL are in scripts/capture-chinook.mbtx and
+examples/chinook/query.sql; contexts distinguish lookup and sort queries. Raw
+plan text is retained, including naturally variable timing and buffer counters.
+Context JSON and policies were authored for this project. Unit tests were authored
+for this contract; none copied from competitors. The duplicate-key/number parser
+uses current core APIs rather than a separately copied JSON scanner.
+
+[PEV2](https://github.com/dalibo/pev2) (PostgreSQL License) and
+[PgHero](https://github.com/ankane/pghero) (MIT) informed the demand/positioning
+review. No code, tests, UI assets or plan samples from them are included.
+MoonPG, MigrationLens, SQLSentinel, sqlc_gen_moonbit and relcore were reviewed
+for API boundaries only; see docs/ecosystem.md. This is a new implementation
+with the specifically acknowledged reuse above, not a port or a claim of ecosystem
+uniqueness. GitHub Actions dependencies retain their own upstream licenses.

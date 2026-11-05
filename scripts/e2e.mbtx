@@ -1,0 +1,65 @@
+----
+import {
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let target = @env.args().get(1).unwrap_or("wasm")
+  let fixtures = @env.args().get(2).unwrap_or("examples/chinook")
+  guard target == "wasm" || target == "native" else { fail("CLI supports wasm/native") }
+  let temp = @fs.tmpdir(prefix="moonplanwatch-e2e-")
+  defer @fs.rmdir(temp, recursive=true)
+  let originals : Map[String, Bytes] = Map([])
+  for name in ["indexed.json", "sequential.json", "analyzed-sort.json", "context.json", "sort-context.json"] {
+    originals[name] = @fs.read_binary(fixtures + "/" + name)
+  }
+  for (raw, ctx, output) in [("indexed.json", "context.json", "base.json"), ("sequential.json", "context.json", "current.json"), ("analyzed-sort.json", "sort-context.json", "sort.json")] {
+    invoke(target, ["capture", fixtures + "/" + raw, fixtures + "/" + ctx, "--output", temp + "/" + output], 0) |> ignore
+  }
+  let base = temp + "/base.json"
+  let current = temp + "/current.json"
+  let index_policy = "examples/policy-index.json"
+  let passed = invoke(target, ["check", base, index_policy], 0)
+  let failed = invoke(target, ["compare", base, current, index_policy], 1)
+  assert_true(failed.contains("SequentialScan") && failed.contains("StructureChanged"))
+  let repeated = invoke(target, ["compare", base, current, index_policy], 1)
+  assert_eq(failed, repeated)
+  let resources = invoke(target, ["check", temp + "/sort.json", "examples/policy-resources.json"], 1)
+  assert_true(resources.contains("DiskSort") && resources.contains("BudgetExceeded"))
+  let missing = invoke(target, ["check", base, "examples/policy-resources.json"], 3)
+  assert_true(missing.contains("MissingMetric"))
+  let mismatch = invoke(target, ["compare", base, temp + "/sort.json", index_policy], 3)
+  assert_true(mismatch.contains("ContextMismatch"))
+  let markdown = invoke(target, ["compare", base, current, index_policy, "--markdown"], 1)
+  assert_true(markdown.has_prefix("# MoonPlanWatch"))
+  let before = @fs.read_binary(base)
+  invoke(target, ["capture", fixtures + "/sequential.json", fixtures + "/context.json", "--output", base], 2) |> ignore
+  assert_eq(@fs.read_binary(base), before)
+  @fs.write_text(temp + "/invalid.json", "{broken", create_mode=CreateNew)
+  invoke(target, ["capture", temp + "/invalid.json", fixtures + "/context.json", "--output", temp + "/should-not-exist"], 2) |> ignore
+  assert_true(!@fs.exists(temp + "/should-not-exist"))
+  @fs.write_binary(temp + "/utf8.json", b"\xff", create_mode=CreateNew)
+  invoke(target, ["check", temp + "/utf8.json", index_policy], 2) |> ignore
+  invoke(target, ["check", temp + "/missing.json", index_policy], 2) |> ignore
+  assert_eq(invoke(target, ["check", base, index_policy], 0), passed)
+  for (name, bytes) in originals { assert_eq(@fs.read_binary(fixtures + "/" + name), bytes) }
+  println("E2E " + target + ": real index/seq/sort, exits 0/1/2/3, determinism, overwrite refusal, UTF-8 and recovery passed")
+}
+
+async fn invoke(target : String, args : Array[String], expected : Int) -> String {
+  let command = ["run", "--target", target, "cmd/moonplanwatch", "--"]
+  command.append(args)
+  let result = @shell.Cmd("moon", command).output(timeout_ms=180000, max_output_bytes=4194304)
+  if result.exit_code() != expected { fail("CLI expected " + expected.to_string() + " got " + result.exit_code().to_string() + ": " + result.stderr() + result.stdout()) }
+  if expected == 1 || expected == 3 || (expected == 0 && args[0] == "check") {
+    if !args.contains("--markdown") {
+      guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("Report body disagrees with process exit") }
+    }
+  }
+  result.stdout()
+}

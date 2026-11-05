@@ -1,0 +1,24 @@
+----
+import {
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/shell",
+  "moonbitlang/core/env",
+}
+----
+
+async fn main {
+  let target = @env.args().get(1).unwrap_or("wasm")
+  guard ["wasm", "wasm-gc", "js", "native"].contains(target) else { fail("unsupported target") }
+  command(["fmt", "--check"])
+  command(["info", "--target", target])
+  @shell.Cmd("git", ["diff", "--exit-code", "--", "."], stdout=Inherit, stderr=Inherit).run()
+  command(["check", "--target", target, "--deny-warn"])
+  command(["build", "--target", target, "--deny-warn"])
+  command(["test", "--target", target, "--deny-warn"])
+  command(["run", "scripts/consumer.mbtx", target])
+  if target == "wasm" || target == "native" { command(["run", "scripts/e2e.mbtx", target]) }
+}
+
+async fn command(args : Array[String]) -> Unit {
+  @shell.Cmd("moon", args, stdout=Inherit, stderr=Inherit).run(timeout_ms=300000)
+}

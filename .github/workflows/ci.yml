@@ -1,0 +1,77 @@
+name: MoonPlanWatch
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        target: [wasm, wasm-gc, js, native]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Configure Windows native compiler
+        if: runner.os == 'Windows' && matrix.target == 'native'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Install pinned stable MoonBit and core
+        uses: hustcer/setup-moonbit@9199da0ab63ea0c0bab1dc15f03d76e17ed4f75f # v1.22
+        with:
+          version: 0.10.19+bee578715
+          core-version: 0.10.19+bee578715
+      - run: moon run scripts/verify.mbtx ${{ matrix.target }}
+
+  postgres-producer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: moonplanwatch
+          POSTGRES_PASSWORD: public-disposable-ci-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U moonplanwatch -d postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: moonplanwatch
+      PGPASSWORD: public-disposable-ci-only
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: hustcer/setup-moonbit@9199da0ab63ea0c0bab1dc15f03d76e17ed4f75f
+        with:
+          version: 0.10.19+bee578715
+          core-version: 0.10.19+bee578715
+      - name: Install PostgreSQL client
+        run: sudo apt-get install --yes postgresql-client
+      - name: Capture real plans and verify offline gates and producer recovery
+        run: moon run scripts/producer-e2e.mbtx psql
+      - name: Preserve real producer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-plan-evidence
+          path: |
+            output/producer-e2e/real/*.json
+            output/producer-e2e/real/query.sql
+            output/producer-e2e/recovery/*.json
+            output/producer-e2e/failed/indexed.json
+          if-no-files-found: warn
+          retention-days: 7

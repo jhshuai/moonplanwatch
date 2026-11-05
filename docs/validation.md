@@ -1,0 +1,31 @@
+# Verification record
+
+Pinned environment: MoonBit compiler `0.10.19+bee578715`, moon/moonrun
+`0.1.20261102 (ea07287)`, matching bundled core. The stable metadata was read
+from https://cli.moonbitlang.com/version.json on 2026-11-05 and installed in an
+isolated directory; other projects' toolchains were not changed.
+
+Locally executed on Windows x86-64: strict library/CLI checks; 19 contract tests
+on Wasm, Wasm-GC and JavaScript; the Wasm CLI E2E using real PostgreSQL fixtures;
+and isolated source consumers on those three backends. Formatting and generated interfaces are checked
+before the initial commit. The tests cover UInt64 precision/overflow, duplicate
+decoded keys, malformed input, depth/node/source/rule limits, roundtrip preservation,
+unknown fields, deterministic output, missing/zero metrics, ambiguous selectors,
+incomplete precedence, recovery, defensive copies and Markdown escaping.
+
+Real producer validation used a dedicated PostgreSQL 18.6 loopback cluster and
+Chinook 1.4.5. The recorded lookup changed naturally from Index Scan to Seq Scan
+after removal of the producer's own name index. The analyzed sort actually spilled
+to disk. Source raw files are checked unchanged after the CLI workflow. A handled
+output collision after database setup preserved the colliding file, removed the
+producer's own schema, and was followed by a successful fresh capture and gate run.
+
+Local Windows native execution could not start because MSVC C++ tools / Windows
+SDK are absent. No native execution success is inferred from a check or config.
+The GitHub Actions matrix is intended to supply Windows MSVC and execute native
+tests, consumer and CLI on all three OSes. Actual CI results must be read from the
+commit's Actions run, not inferred from this configuration. Script-mode use of
+experimental core/async packages currently emits advisory package warnings;
+regular module packages acknowledge the experimental imports explicitly.
+
+This record makes no performance or universal PostgreSQL compatibility claim.

@@ -1,0 +1,5 @@
+* text=auto eol=lf
+# Producer CRLF and the upstream notice are intentionally preserved byte-for-byte.
+/examples/chinook/*.json -text whitespace=cr-at-eol
+/examples/chinook/*.sql -text
+/examples/chinook/LICENSE.chinook.md -text -whitespace

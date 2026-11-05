@@ -1,0 +1,51 @@
+----
+import {
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/shell",
+  "moonbitlang/core/env",
+}
+----
+
+async fn main {
+  let psql = @env.args().get(1).unwrap_or("psql")
+  let root = @env.args().get(2).unwrap_or("output/producer-e2e")
+  if @fs.exists(root) { fail("Use a new producer E2E destination") }
+  @fs.mkdir(root, recursive=true)
+  let destination = root + "/real"
+  @shell.Cmd("moon", ["run", "scripts/capture-chinook.mbtx", psql, destination], stdout=Inherit, stderr=Inherit).run(timeout_ms=180000)
+  @shell.Cmd("moon", ["run", "scripts/e2e.mbtx", "wasm", destination], stdout=Inherit, stderr=Inherit).run(timeout_ms=180000)
+  let before = @fs.read_binary(destination + "/indexed.json")
+  let repeat = @shell.Cmd("moon", ["run", "scripts/capture-chinook.mbtx", psql, destination]).output(timeout_ms=180000)
+  assert_true(repeat.exit_code() != 0)
+  assert_eq(@fs.read_binary(destination + "/indexed.json"), before)
+  // Create a colliding output while the producer downloads its source. The
+  // database setup succeeds, but exclusive output creation must fail and the
+  // handled-error path must remove only its own schema and preserve this file.
+  @async.with_task_group(group => {
+    let capture = group.spawn(async fn() {
+      @shell.Cmd("moon", ["run", "scripts/capture-chinook.mbtx", psql, root + "/failed"]).output(timeout_ms=180000)
+    })
+    @async.with_timeout(60000, async fn() {
+      while !@fs.exists(root + "/failed") { @async.sleep(10) }
+      @fs.write_text(root + "/failed/indexed.json", "collision-sentinel", create_mode=CreateNew)
+    })
+    let failed = capture.wait()
+    assert_true(failed.exit_code() != 0)
+    assert_true(failed.stderr().contains("exist") || failed.stderr().contains("存在"))
+    assert_eq(@fs.read_text(root + "/failed/indexed.json"), "collision-sentinel")
+  })
+  let probe = @shell.Cmd(psql, ["-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-c", "SELECT count(*) FROM pg_namespace WHERE nspname='moonplanwatch_demo';"]).output()
+  probe.check()
+  assert_eq(probe.stdout().trim().to_owned(), "0")
+  @shell.Cmd(psql, ["-X", "-q", "-v", "ON_ERROR_STOP=1", "-c", "CREATE SCHEMA moonplanwatch_demo; CREATE TABLE moonplanwatch_demo.sentinel(value int); INSERT INTO moonplanwatch_demo.sentinel VALUES (7);"]).run()
+  let preexisting = @shell.Cmd("moon", ["run", "scripts/capture-chinook.mbtx", psql, root + "/existing-schema"]).output(timeout_ms=180000)
+  assert_true(preexisting.exit_code() != 0)
+  let preserved = @shell.Cmd(psql, ["-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-c", "SELECT value FROM moonplanwatch_demo.sentinel;"]).output()
+  preserved.check()
+  assert_eq(preserved.stdout().trim().to_owned(), "7")
+  @shell.Cmd(psql, ["-X", "-q", "-v", "ON_ERROR_STOP=1", "-c", "DROP TABLE moonplanwatch_demo.sentinel; DROP SCHEMA moonplanwatch_demo;"]).run()
+  @shell.Cmd("moon", ["run", "scripts/capture-chinook.mbtx", psql, root + "/recovery"], stdout=Inherit, stderr=Inherit).run(timeout_ms=180000)
+  @shell.Cmd("moon", ["run", "scripts/e2e.mbtx", "wasm", root + "/recovery"], stdout=Inherit, stderr=Inherit).run(timeout_ms=180000)
+  println("Real producer capture, output/schema refusal, handled output failure, cleanup and recovery passed")
+}

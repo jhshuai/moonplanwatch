@@ -1,0 +1,7 @@
+MoonPlanWatch
+Copyright 2026 MoonPlanWatch contributors
+
+The bounded strict-UTF-8 regular-file reading algorithm in cli/commands.mbt
+is adapted from MoonTestLedger, copyright 2026 MoonTestLedger contributors,
+licensed under Apache License 2.0. Both repositories are maintained by jhshuai.
+See THIRD_PARTY.md for the exact source revision and other external resources.

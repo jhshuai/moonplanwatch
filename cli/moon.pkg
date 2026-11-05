@@ -1,0 +1,16 @@
+import {
+  "jhshuai/moonplanwatch" @watch,
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/stdio",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/encoding/utf8",
+}
+
+supported_targets = "+wasm+native"
+
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async/fs",
+    "moonbitlang/core/async/stdio",
+  ],
+)

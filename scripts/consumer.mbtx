@@ -1,0 +1,31 @@
+----
+import {
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let target = @env.args().get(1).unwrap_or("wasm")
+  let root = @fs.tmpdir(prefix="moonplanwatch-consumer-")
+  defer @fs.rmdir(root, recursive=true)
+  let library = root + "/library"
+  let consumer = root + "/consumer"
+  @fs.mkdir(library)
+  @fs.mkdir(consumer)
+  // Explicit source allowlist; never imports this workspace's build/cache state.
+  for name in ["moon.mod", "moon.pkg", "types.mbt", "traits.mbt", "json_input.mbt", "capture.mbt", "evaluate.mbt"] {
+    @fs.write_binary(library + "/" + name, @fs.read_binary(name), create_mode=CreateNew)
+  }
+  for name in ["moon.mod", "moon.pkg", "main.mbt"] {
+    @fs.write_binary(consumer + "/" + name, @fs.read_binary("examples/consumer/" + name), create_mode=CreateNew)
+  }
+  @fs.write_text(root + "/moon.work", "members = [\"library\", \"consumer\"]\n", create_mode=CreateNew)
+  let result = @shell.Cmd("moon", ["-C", consumer, "run", "--deny-warn", "--target", target, ".", "--", @fs.read_text("examples/chinook/sequential.json"), @fs.read_text("examples/chinook/context.json"), @fs.read_text("examples/policy-index.json")]).output(timeout_ms=180000, max_output_bytes=4194304)
+  if result.exit_code() != 0 { fail("Independent consumer failed: " + result.stderr() + result.stdout()) }
+  guard @json.parse(result.stdout()) is { "exit_code": Number(1, ..), "findings": [{ "code": String("SequentialScan"), .. }], .. } else { fail("Independent consumer did not enforce policy") }
+  println("Independent consumer " + target + ": policy and evidence roundtrip passed")
+}

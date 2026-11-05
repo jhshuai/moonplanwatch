@@ -1,0 +1,13 @@
+import {
+  "jhshuai/moonplanwatch/cli",
+  "moonbitlang/core/async",
+  "moonbitlang/core/env",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "+wasm+native"
+
+options(
+  "allow-experimental-packages": [ "moonbitlang/core/async" ],
+)

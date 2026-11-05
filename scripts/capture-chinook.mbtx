@@ -1,0 +1,59 @@
+----
+import {
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/shell",
+  "moonbitlang/core/env",
+}
+----
+
+/// Reproduces fixtures on an explicitly supplied disposable PostgreSQL database.
+/// Uses PGHOST/PGPORT/PGUSER/PGDATABASE; never invokes a shell or alters a preexisting schema.
+async fn main {
+  guard @env.args() is [_, psql, destination] else {
+    fail("Usage: moon run scripts/capture-chinook.mbtx PSQL NEW_DIRECTORY (disposable PostgreSQL 18 database only)")
+  }
+  if @fs.exists(destination) { fail("Destination exists; use a new directory") }
+  @fs.mkdir(destination, recursive=true)
+  let curl = if @env.get_env_var("OS") == Some("Windows_NT") { "curl.exe" } else { "curl" }
+  let pin = "7f67772503d71ba90f19283c38e93923addb43fa"
+  let base = "https://raw.githubusercontent.com/lerocha/chinook-database/" + pin
+  @shell.Cmd(curl, ["--fail", "--silent", "--show-error", "--location", "--max-time", "90", "--output", destination + "/Chinook_PostgreSql.sql", base + "/ChinookDatabase/DataSources/Chinook_PostgreSql.sql"], stderr=Inherit).run(timeout_ms=100000)
+  let upstream = @fs.read_text(destination + "/Chinook_PostgreSql.sql")
+  let parts = upstream.split("\\c chinook;").collect()
+  guard parts.length() == 2 && !parts[1].contains("DROP DATABASE") && !parts[1].contains("CREATE DATABASE") else { fail("Unexpected upstream SQL envelope; refusing database setup") }
+  let schema = "moonplanwatch_demo"
+  let setup = "BEGIN; CREATE SCHEMA " + schema + "; SET search_path TO " + schema + ";\n" + parts[1].to_owned() + "\nCOMMIT;"
+  // CREATE SCHEMA fails if the schema already exists. No cleanup runs before
+  // this command succeeds, so an existing owner's schema is never dropped.
+  @shell.Cmd(psql, ["-X", "-v", "ON_ERROR_STOP=1", "-q"], stdin=Text(setup), stdout=Discard, stderr=Inherit).run(timeout_ms=120000)
+  let result : Result[Unit, Error] = try {
+    let version = sql(psql, "SHOW server_version;").trim().to_owned()
+    guard version.has_prefix("18.") else { fail("This producer requires PostgreSQL 18.x") }
+    sql(psql, "CREATE INDEX moonplanwatch_demo_name_idx ON moonplanwatch_demo.track(name); ANALYZE moonplanwatch_demo.track;") |> ignore
+    let query = "SELECT track_id, name FROM moonplanwatch_demo.track WHERE name = 'For Those About To Rock (We Salute You)';"
+    let settings = "SET max_parallel_workers_per_gather=0; SET jit=off; SET work_mem='64kB'; SET search_path TO moonplanwatch_demo; "
+    let base_plan = sql(psql, settings + "EXPLAIN (VERBOSE, FORMAT JSON) " + query)
+    sql(psql, "DROP INDEX moonplanwatch_demo.moonplanwatch_demo_name_idx;") |> ignore
+    let current = sql(psql, settings + "EXPLAIN (VERBOSE, FORMAT JSON) " + query)
+    let analyzed = sql(psql, settings + "EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON) SELECT * FROM moonplanwatch_demo.track ORDER BY name, composer;")
+    for (file, contents) in [("indexed.json", base_plan), ("sequential.json", current), ("analyzed-sort.json", analyzed), ("query.sql", query + "\n")] {
+      @fs.write_text(destination + "/" + file, contents, create_mode=CreateNew)
+    }
+    let context = Json::object({"query_id": Json::string("chinook-track-by-name-v1"), "parameters_id": Json::string("literal-for-those-about-to-rock"), "dataset_id": Json::string("chinook-1.4.5-" + pin), "server_version": Json::string(version.split(" ").collect()[0].to_owned()), "settings_id": Json::string("parallel0-jitoff-workmem64k-defaults-" + version)})
+    @fs.write_text(destination + "/context.json", context.stringify() + "\n", create_mode=CreateNew)
+    let sort_context = match context { Object(fields) => { let copy = fields.copy(); copy["query_id"] = Json::string("chinook-sort-name-composer-v1"); copy["parameters_id"] = Json::string("none"); Json::object(copy) }; _ => context }
+    @fs.write_text(destination + "/sort-context.json", sort_context.stringify() + "\n", create_mode=CreateNew)
+    println("Captured real PostgreSQL " + version + " plans in " + destination)
+    Ok(())
+  } catch { error => Err(error) }
+  // Only the schema created successfully by this invocation is removed.
+  sql(psql, "DROP SCHEMA moonplanwatch_demo CASCADE;") |> ignore
+  match result { Ok(_) => (); Err(error) => raise error }
+}
+
+async fn sql(psql : String, query : String) -> String {
+  let output = @shell.Cmd(psql, ["-X", "-v", "ON_ERROR_STOP=1", "-qAt"], stdin=Text(query), stderr=Inherit).output(timeout_ms=120000, max_output_bytes=8388608)
+  output.check()
+  output.stdout()
+}
