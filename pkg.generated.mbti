@@ -94,7 +94,7 @@ pub fn NodeInfo::to_repr(Self) -> @debug.Repr
 pub struct Policy {
   // private fields
 }
-pub fn Policy::new(access? : Array[AccessRule], max_shared_reads? : UInt64, max_temp_writes? : UInt64, forbid_disk_sort? : Bool) -> Self raise InputError
+pub fn Policy::new(access? : Array[AccessRule], max_shared_reads? : UInt64, max_shared_writes? : UInt64, max_temp_writes? : UInt64, forbid_disk_sort? : Bool) -> Self raise InputError
 
 #derive(Eq, @debug.Debug)
 pub(all) struct Relation {

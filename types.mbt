@@ -89,6 +89,7 @@ pub(all) struct NodeInfo {
 priv struct PlanNode {
   info : NodeInfo
   shared_reads : UInt64?
+  shared_writes : UInt64?
   temp_writes : UInt64?
   sort_space : String?
 }
@@ -133,6 +134,7 @@ pub(all) struct AccessRule {
 pub struct Policy {
   priv access : Array[AccessRule]
   priv max_shared_reads : UInt64?
+  priv max_shared_writes : UInt64?
   priv max_temp_writes : UInt64?
   priv forbid_disk_sort : Bool
 }
@@ -141,6 +143,7 @@ pub struct Policy {
 pub fn Policy::new(
   access~ : Array[AccessRule] = [],
   max_shared_reads? : UInt64,
+  max_shared_writes? : UInt64,
   max_temp_writes? : UInt64,
   forbid_disk_sort~ : Bool = false,
 ) -> Policy raise InputError {
@@ -174,6 +177,7 @@ pub fn Policy::new(
   {
     access: access.copy(),
     max_shared_reads,
+    max_shared_writes,
     max_temp_writes,
     forbid_disk_sort,
   }

@@ -55,13 +55,18 @@ matches produce `AmbiguousRelation` and exit 3. No fuzzy matching or automatic
 alias matching is attempted. A selected Seq Scan violates a forbidding rule even
 if runtime loops were zero: this is a structural access policy.
 
-Shared Read Blocks and Temp Written Blocks are exact UInt64 decimal integer
+Shared Read Blocks, Shared Written Blocks and Temp Written Blocks are exact UInt64 decimal integer
 literals. Signs, fractions, exponent notation, overflow and nonnumeric values
 are errors. No conversion through Double determines a budget. Only the root's
 inclusive counters are checked: parent/child values are not added. These are
 PostgreSQL blocks, not bytes, per-loop averages or elapsed time. A required but
 absent counter produces exit 3, not zero usage. Disk-sort checks require each
 Sort node's Sort Space Type; Memory passes, Disk violates, absence is incomplete.
+
+Set `max_shared_writes` to cap the root's Shared Written Blocks counter. For
+example, `{"schema":1,"max_shared_writes":0}` requires a recorded zero. This
+counter measures shared buffers written during execution. It differs from the
+number of buffers dirtied and can vary with cache state.
 
 ## Comparison and reports
 

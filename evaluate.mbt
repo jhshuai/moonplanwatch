@@ -41,6 +41,13 @@ pub fn evaluate(capture : Capture, policy : Policy) -> Report {
     findings,
   )
   budget(
+    root.shared_writes,
+    policy.max_shared_writes,
+    "Shared Written Blocks",
+    root.info.path,
+    findings,
+  )
+  budget(
     root.temp_writes,
     policy.max_temp_writes,
     "Temp Written Blocks",

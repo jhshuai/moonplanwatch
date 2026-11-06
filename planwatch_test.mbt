@@ -237,6 +237,25 @@ test "parallel and extensions are incomplete even when violating" {
 }
 
 ///|
+test "shared write budget uses exact inclusive root counts" {
+  let exact = plan(
+    "{\"Node Type\":\"Limit\",\"Shared Written Blocks\":9007199254740993,\"Plans\":[{\"Node Type\":\"Result\",\"Shared Written Blocks\":9007199254740993}]}",
+  )
+  let pass = @moonplanwatch.decode_policy(
+    "{\"schema\":1,\"max_shared_writes\":9007199254740993}",
+  )
+  let fail_policy = @moonplanwatch.decode_policy(
+    "{\"schema\":1,\"max_shared_writes\":9007199254740992}",
+  )
+  assert_eq(@moonplanwatch.evaluate(exact, pass).exit_code(), 0)
+  let failed = @moonplanwatch.evaluate(exact, fail_policy)
+  assert_eq(failed.exit_code(), 1)
+  assert_eq(failed.findings()[0].path, "/0/Plan/Shared Written Blocks")
+  let missing = plan("{\"Node Type\":\"Result\"}")
+  assert_eq(@moonplanwatch.evaluate(missing, pass).exit_code(), 3)
+}
+
+///|
 test "context mismatch prevents comparison" {
   let base = plan("{\"Node Type\":\"Result\"}")
   let other = @moonplanwatch.read_plan(base.source(), context(query="another"))

@@ -157,6 +157,7 @@ fn walk_plan(
   nodes.push({
     info: { path, kind, relation, index_name, },
     shared_reads: optional_count(fields, "Shared Read Blocks", path),
+    shared_writes: optional_count(fields, "Shared Written Blocks", path),
     temp_writes: optional_count(fields, "Temp Written Blocks", path),
     sort_space,
   })

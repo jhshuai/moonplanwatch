@@ -161,7 +161,8 @@ pub fn decode_policy(source : String) -> Policy raise InputError {
   closed(
     fields,
     [
-      "schema", "access", "max_shared_reads", "max_temp_writes", "forbid_disk_sort",
+      "schema", "access", "max_shared_reads", "max_shared_writes", "max_temp_writes",
+      "forbid_disk_sort",
     ],
     "",
   )
@@ -205,6 +206,7 @@ pub fn decode_policy(source : String) -> Policy raise InputError {
   Policy::new(
     access=rules,
     max_shared_reads?=optional_count(fields, "max_shared_reads", ""),
+    max_shared_writes?=optional_count(fields, "max_shared_writes", ""),
     max_temp_writes?=optional_count(fields, "max_temp_writes", ""),
     forbid_disk_sort=boolean(fields, "forbid_disk_sort", "", default=false),
   )
