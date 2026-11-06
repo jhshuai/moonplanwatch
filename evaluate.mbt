@@ -125,11 +125,27 @@ pub fn compare(
     })
   }
   if baseline.context != current.context {
+    let a = baseline.context
+    let b = current.context
+    let changed = [
+      ("query_id", a.query_id == b.query_id),
+      ("parameters_id", a.parameters_id == b.parameters_id),
+      ("dataset_id", a.dataset_id == b.dataset_id),
+      ("settings_id", a.settings_id == b.settings_id),
+      ("server_version", a.server_version == b.server_version),
+    ].filter_map(fn(pair) {
+      let (field, same) = pair
+      if same {
+        None
+      } else {
+        Some(field)
+      }
+    })
     findings.push({
       kind: Incomplete,
       code: "ContextMismatch",
       path: "/context",
-      message: "query, parameters, dataset, settings and server version declarations must all match",
+      message: "capture declarations differ: " + changed.join(", "),
     })
   } else {
     let before = baseline.nodes.map(node => node.info)

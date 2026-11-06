@@ -240,6 +240,11 @@ test "parallel and extensions are incomplete even when violating" {
 test "context mismatch prevents comparison" {
   let base = plan("{\"Node Type\":\"Result\"}")
   let other = @moonplanwatch.read_plan(base.source(), context(query="another"))
+  let report = @moonplanwatch.compare(base, other, @moonplanwatch.Policy::new())
+  assert_eq(
+    report.findings()[0].message,
+    "capture declarations differ: query_id",
+  )
   assert_eq(
     @moonplanwatch.compare(base, other, @moonplanwatch.Policy::new()).exit_code(),
     3,
