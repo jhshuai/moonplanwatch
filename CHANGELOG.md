@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 — 2026-11-06
+
+- `inspect` reports node identities, declared capture context, limitations and exact root buffer counters.
+- `extract` recovers original UTF-8 plans from captures and protects existing files.
+- `max_shared_writes` adds an inclusive root buffer budget.
+- `compare --require-same-structure` enables a structural CI gate. Reports identify the first difference and name mismatched context fields.
+- File errors and policy errors identify the affected path.
+- Schema 1 stays in use. CI reads and extracts a capture produced by the original 0.1.0 executable.
+
 ## 0.1.0 — 2026-11-05
 
 - Offline PostgreSQL 18 nonparallel SELECT profile with explicit unknown-data handling.

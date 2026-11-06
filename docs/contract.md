@@ -1,4 +1,4 @@
-# Input and policy contract — 0.1.0
+# Input and policy contract — 0.2.0
 
 ## Evidence
 

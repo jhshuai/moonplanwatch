@@ -117,16 +117,21 @@ async fn inspect_capture(path : String) -> Int32 {
 }
 
 ///|
+const VERSION = "0.2.0"
+
+///|
 pub async fn run(args : Array[String]) -> Int32 {
   try {
     match args {
       ["--version"] => {
-        @stdio.stdout.text.write("moonplanwatch 0.1.0\n")
+        @stdio.stdout.text.write("moonplanwatch " + VERSION + "\n")
         0
       }
       ["--help"] => {
         @stdio.stdout.text.write(
-          "moonplanwatch 0.1.0\n  capture PLAN.json CONTEXT.json --output NEW.json\n  extract CAPTURE.json --output NEW_PLAN.json\n  inspect CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown] [--require-same-structure]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
+          "moonplanwatch " +
+          VERSION +
+          "\n  capture PLAN.json CONTEXT.json --output NEW.json\n  extract CAPTURE.json --output NEW_PLAN.json\n  inspect CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown] [--require-same-structure]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
         )
         0
       }

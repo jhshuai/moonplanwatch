@@ -48,6 +48,15 @@ async fn main {
   invoke(target, ["extract", incomplete, "--output", restored], 0) |> ignore
   assert_eq(@fs.read_binary(restored), @fs.read_binary(unsupported))
   let index_policy = "examples/policy-index.json"
+  let version = invoke(target, ["--version"], 0).trim()
+  guard version.has_prefix("moonplanwatch ") else { fail("Expected CLI version") }
+  let version_line = "version = " + Json::string(version[14:].to_owned()).stringify()
+  assert_true(@fs.read_text("moon.mod").split("\n").any(line => line.trim() == version_line))
+  let legacy = "examples/chinook/indexed-v010.capture.json"
+  let legacy_plan = temp + "/legacy-plan.json"
+  invoke(target, ["check", legacy, index_policy], 0) |> ignore
+  invoke(target, ["extract", legacy, "--output", legacy_plan], 0) |> ignore
+  assert_eq(@fs.read_binary(legacy_plan), @fs.read_binary("examples/chinook/indexed.json"))
   let passed = invoke(target, ["check", base, index_policy], 0)
   let failed = invoke(target, ["compare", base, current, index_policy], 1)
   assert_true(failed.contains("SequentialScan") && failed.contains("StructureChanged"))
