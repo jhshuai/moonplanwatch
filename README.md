@@ -56,7 +56,8 @@ invalid input.
 
 `capture` archives valid input even if its profile is incomplete; it does not run
 the policy gate. Gate commands emit reports on stdout for exits 0, 1 and 3;
-diagnostics for exit 2 go to stderr. Never convert a nonzero gate to success in CI.
+diagnostics for exit 2 go to stderr. File read, creation and write diagnostics
+identify the affected path. Never convert a nonzero gate to success in CI.
 
 ## Three workflows
 

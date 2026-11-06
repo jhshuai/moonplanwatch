@@ -26,7 +26,7 @@ async fn main {
   let extracted = temp + "/extracted.json"
   invoke(target, ["extract", base, "--output", extracted], 0) |> ignore
   assert_eq(@fs.read_binary(extracted), originals["indexed.json"])
-  invoke(target, ["extract", current, "--output", extracted], 2) |> ignore
+  invoke(target, ["extract", current, "--output", extracted], 2, diagnostic=("FileCreate", extracted)) |> ignore
   assert_eq(@fs.read_binary(extracted), originals["indexed.json"])
   let inspected = invoke(target, ["inspect", base], 0)
   guard @json.parse(inspected) is {
@@ -66,18 +66,24 @@ async fn main {
   assert_true(!@fs.exists(temp + "/should-not-exist"))
   @fs.write_binary(temp + "/utf8.json", b"\xff", create_mode=CreateNew)
   invoke(target, ["check", temp + "/utf8.json", index_policy], 2) |> ignore
-  invoke(target, ["check", temp + "/missing.json", index_policy], 2) |> ignore
+  let missing_path = temp + "/missing.json"
+  invoke(target, ["check", missing_path, index_policy], 2, diagnostic=("FileRead", missing_path)) |> ignore
   invoke(target, ["inspect", temp + "/invalid.json"], 2) |> ignore
   assert_eq(invoke(target, ["check", base, index_policy], 0), passed)
   for (name, bytes) in originals { assert_eq(@fs.read_binary(fixtures + "/" + name), bytes) }
   println("E2E " + target + ": real index/seq/sort, exits 0/1/2/3, determinism, overwrite refusal, UTF-8 and recovery passed")
 }
 
-async fn invoke(target : String, args : Array[String], expected : Int) -> String {
+async fn invoke(target : String, args : Array[String], expected : Int, diagnostic? : (String, String)) -> String {
   let command = ["run", "--target", target, "cmd/moonplanwatch", "--"]
   command.append(args)
   let result = @shell.Cmd("moon", command).output(timeout_ms=180000, max_output_bytes=4194304)
   if result.exit_code() != expected { fail("CLI expected " + expected.to_string() + " got " + result.exit_code().to_string() + ": " + result.stderr() + result.stdout()) }
+  if diagnostic is Some((code, path)) {
+    guard @json.parse(result.stderr()) is { "code": String(actual_code), "path": String(actual_path), .. } else { fail("Expected a JSON file diagnostic") }
+    assert_eq(actual_code, code)
+    assert_eq(actual_path, path)
+  }
   if expected == 1 || expected == 3 || (expected == 0 && (args[0] == "check" || args[0] == "inspect")) {
     if !args.contains("--markdown") {
       guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("Report body disagrees with process exit") }

@@ -7,14 +7,22 @@ fn refusal(code : String, path : String, message : String) -> @watch.InputError 
 // Bounded regular-file reads with strict UTF-8. Algorithm adapted from
 // MoonTestLedger cli/files.mbt; attribution and source pin: THIRD_PARTY.md.
 async fn read_text(path : String) -> String {
-  let file = @fs.open(path, mode=ReadOnly)
+  let file = @fs.open(path, mode=ReadOnly) catch {
+    _ =>
+      raise refusal(
+        "FileRead", path, "cannot open input file; check that it exists and is readable",
+      )
+  }
   defer file.close()
   if file.kind() != @fs.Regular {
     raise refusal("FileKind", path, "expected a regular UTF-8 file")
   }
   let buffer = @buffer.Buffer()
   for ;; {
-    match file.read() {
+    let chunk = file.read() catch {
+      _ => raise refusal("FileRead", path, "cannot read input file")
+    }
+    match chunk {
       None => break
       Some(chunk) => {
         if chunk.length() > 16777216 - buffer.length() {
@@ -31,11 +39,23 @@ async fn read_text(path : String) -> String {
 
 ///|
 async fn write_new(path : String, source : String) -> Unit {
-  let file = @fs.open(path, mode=WriteOnly, create_mode=CreateNew)
+  let file = @fs.open(path, mode=WriteOnly, create_mode=CreateNew) catch {
+    _ =>
+      raise refusal(
+        "FileCreate", path, "cannot create output file; choose a new path in a writable directory",
+      )
+  }
   errdefer @fs.remove(path)
   defer file.close()
-  file.text.write(source)
-  file.sync()
+  try {
+    file.text.write(source)
+    file.sync()
+  } catch {
+    _ =>
+      raise refusal(
+        "FileWrite", path, "cannot finish writing output file; check available space and permissions",
+      )
+  }
 }
 
 ///|
