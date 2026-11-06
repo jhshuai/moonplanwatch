@@ -59,15 +59,26 @@ async fn write_new(path : String, source : String) -> Unit {
 }
 
 ///|
+fn counter_json(counter : UInt64?) -> Json {
+  counter.map(value => Json::string(value.to_string())).unwrap_or(Json::null())
+}
+
+///|
 async fn inspect_capture(path : String) -> Int32 {
   let capture = @watch.decode_capture(read_text(path))
   let limitations = capture.limitations()
   let code = if limitations.is_empty() { 0 } else { 3 }
+  let buffers = capture.root_buffers()
   let summary = Json::object({
     "schema": Json::number(1),
     "mode": Json::string("inspect"),
     "query_id": Json::string(capture.context().query_id()),
     "exit_code": Json::number(code.to_double()),
+    "root_buffers": Json::object({
+      "shared_reads": counter_json(buffers.shared_reads),
+      "shared_writes": counter_json(buffers.shared_writes),
+      "temp_writes": counter_json(buffers.temp_writes),
+    }),
     "nodes": Json::array(
       capture
       .nodes()

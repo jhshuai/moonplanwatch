@@ -38,6 +38,7 @@ pub fn Capture::context(Self) -> Context
 pub fn Capture::encode(Self) -> String
 pub fn Capture::limitations(Self) -> Array[Diagnostic]
 pub fn Capture::nodes(Self) -> Array[NodeInfo]
+pub fn Capture::root_buffers(Self) -> RootBuffers
 pub fn Capture::source(Self) -> String
 
 #derive(Eq)
@@ -113,6 +114,12 @@ pub fn Report::exit_code(Self) -> Int32
 pub fn Report::findings(Self) -> Array[Finding]
 pub fn Report::to_json(Self) -> String
 pub fn Report::to_markdown(Self) -> String
+
+pub(all) struct RootBuffers {
+  shared_reads : UInt64?
+  shared_writes : UInt64?
+  temp_writes : UInt64?
+}
 
 // Type aliases
 

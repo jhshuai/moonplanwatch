@@ -32,6 +32,7 @@ async fn main {
   guard @json.parse(inspected) is {
     "mode": String("inspect"),
     "nodes": [{ "kind": String("Index Scan"), "index_name": String(_), .. }],
+    "root_buffers": { "shared_reads": Null, "shared_writes": Null, "temp_writes": Null, .. },
     "limitations": [],
     ..
   } else { fail("Inspect must identify the captured index scan") }
@@ -57,6 +58,11 @@ async fn main {
   invoke(target, ["compare", base, base, empty_policy, "--require-same-structure"], 0) |> ignore
   invoke(target, ["compare", base, temp + "/sort.json", empty_policy, "--require-same-structure"], 3) |> ignore
   let resources = invoke(target, ["check", temp + "/sort.json", "examples/policy-resources.json"], 1)
+  let sort_inspected = invoke(target, ["inspect", temp + "/sort.json"], 0)
+  guard @json.parse(sort_inspected) is {
+    "root_buffers": { "shared_reads": String(_), "shared_writes": String(_), "temp_writes": String(writes), .. },
+    ..
+  } && writes != "0" else { fail("Expected root buffer counters for the real disk sort") }
   assert_true(resources.contains("DiskSort") && resources.contains("BudgetExceeded"))
   let missing = invoke(target, ["check", base, "examples/policy-resources.json"], 3)
   assert_true(missing.contains("MissingMetric"))

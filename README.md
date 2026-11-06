@@ -54,6 +54,11 @@ original whitespace, to a new file for use in other PostgreSQL tools.
 in JSON. It exits 0 for supported evidence, 3 for incomplete evidence, or 2 for
 invalid input.
 
+`inspect` also reports the inclusive root buffer counts used by the budget
+checks. `root_buffers` uses decimal strings to preserve UInt64 precision and
+`null` for a counter absent from the capture. Library callers can read the
+same counters with `Capture::root_buffers()`.
+
 Use `compare --require-same-structure` when CI must enforce the same node paths,
 types, relations and index names as the baseline. A structural change then
 produces exit 1. Incompatible or incomplete evidence still produces exit 3.

@@ -104,6 +104,24 @@ pub struct Capture {
 }
 
 ///|
+/// Inclusive root counters used by budget checks. None means not recorded.
+pub(all) struct RootBuffers {
+  shared_reads : UInt64?
+  shared_writes : UInt64?
+  temp_writes : UInt64?
+}
+
+///|
+pub fn Capture::root_buffers(self : Capture) -> RootBuffers {
+  let root = self.nodes[0]
+  {
+    shared_reads: root.shared_reads,
+    shared_writes: root.shared_writes,
+    temp_writes: root.temp_writes,
+  }
+}
+
+///|
 pub fn Capture::source(self : Capture) -> String {
   self.source
 }

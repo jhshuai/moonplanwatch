@@ -241,6 +241,8 @@ test "shared write budget uses exact inclusive root counts" {
   let exact = plan(
     "{\"Node Type\":\"Limit\",\"Shared Written Blocks\":9007199254740993,\"Plans\":[{\"Node Type\":\"Result\",\"Shared Written Blocks\":9007199254740993}]}",
   )
+  assert_eq(exact.root_buffers().shared_writes, Some(9007199254740993UL))
+  assert_eq(exact.root_buffers().shared_reads, None)
   let pass = @moonplanwatch.decode_policy(
     "{\"schema\":1,\"max_shared_writes\":9007199254740993}",
   )
