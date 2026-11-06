@@ -285,6 +285,19 @@ test "policy diagnostics point to the exact invalid access entry" {
 }
 
 ///|
+test "standalone context encoding preserves all identity fields" {
+  let original = @moonplanwatch.Context::new(
+    query_id="query",
+    parameters_id="parameters",
+    dataset_id="dataset",
+    settings_id="settings",
+    server_version="18.6",
+  )
+  let restored = @moonplanwatch.decode_context(original.to_json().stringify())
+  assert_true(restored == original)
+}
+
+///|
 test "context mismatch prevents comparison" {
   let base = plan("{\"Node Type\":\"Result\"}")
   let other = @moonplanwatch.read_plan(base.source(), context(query="another"))

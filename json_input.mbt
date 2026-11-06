@@ -123,7 +123,8 @@ fn closed(
 }
 
 ///|
-fn context_json(context : Context) -> Json {
+/// Return a fresh JSON object in the standalone capture-context format.
+pub fn Context::to_json(context : Context) -> Json {
   Json::object({
     "query_id": Json::string(context.query_id),
     "parameters_id": Json::string(context.parameters_id),

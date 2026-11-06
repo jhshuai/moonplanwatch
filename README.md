@@ -54,6 +54,11 @@ original whitespace, to a new file for use in other PostgreSQL tools.
 in JSON. It exits 0 for supported evidence, 3 for incomplete evidence, or 2 for
 invalid input.
 
+The `context` object in `inspect` shows the five declarations used for
+compatibility checks. Save that object as JSON to reuse it with `capture`
+after confirming the declarations still apply. Library callers can use
+`Context::to_json()` to obtain the same object.
+
 `inspect` also reports the inclusive root buffer counts used by the budget
 checks. `root_buffers` uses decimal strings to preserve UInt64 precision and
 `null` for a counter absent from the capture. Library callers can read the

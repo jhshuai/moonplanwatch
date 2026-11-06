@@ -182,7 +182,7 @@ pub fn Capture::encode(self : Capture) -> String {
   Json::object({
     "schema": Json::number(1),
     "kind": Json::string("moonplanwatch/capture"),
-    "context": context_json(self.context),
+    "context": self.context.to_json(),
     "plan_source": Json::string(self.source),
   }).stringify()
 }

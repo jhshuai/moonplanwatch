@@ -3,6 +3,7 @@ package "jhshuai/moonplanwatch"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -49,6 +50,7 @@ pub fn Context::equal(Self, Self) -> Bool
 pub fn Context::new(query_id~ : String, parameters_id~ : String, dataset_id~ : String, server_version~ : String, settings_id~ : String) -> Self raise InputError
 pub fn Context::not_equal(Self, Self) -> Bool
 pub fn Context::query_id(Self) -> String
+pub fn Context::to_json(Self) -> @json.Json
 
 #derive(Eq, @debug.Debug)
 pub(all) struct Diagnostic {

@@ -36,6 +36,8 @@ async fn main {
     "limitations": [],
     ..
   } else { fail("Inspect must identify the captured index scan") }
+  guard @json.parse(inspected) is { "context": context, .. } else { fail("Expected declared capture context") }
+  assert_true(context == @json.parse(@fs.read_text(fixtures + "/context.json")))
   let unsupported = temp + "/unsupported.json"
   @fs.write_text(unsupported, "[{\"Plan\":{\"Node Type\":\"Future Scan\"}}]", create_mode=CreateNew)
   let incomplete = temp + "/incomplete.json"

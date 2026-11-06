@@ -73,6 +73,7 @@ async fn inspect_capture(path : String) -> Int32 {
     "schema": Json::number(1),
     "mode": Json::string("inspect"),
     "query_id": Json::string(capture.context().query_id()),
+    "context": capture.context().to_json(),
     "exit_code": Json::number(code.to_double()),
     "root_buffers": Json::object({
       "shared_reads": counter_json(buffers.shared_reads),
