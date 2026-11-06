@@ -114,7 +114,7 @@ pub async fn run(args : Array[String]) -> Int32 {
       }
       ["--help"] => {
         @stdio.stdout.text.write(
-          "moonplanwatch 0.1.0\n  capture PLAN.json CONTEXT.json --output NEW.json\n  extract CAPTURE.json --output NEW_PLAN.json\n  inspect CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
+          "moonplanwatch 0.1.0\n  capture PLAN.json CONTEXT.json --output NEW.json\n  extract CAPTURE.json --output NEW_PLAN.json\n  inspect CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown] [--require-same-structure]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
         )
         0
       }
@@ -148,18 +148,23 @@ pub async fn run(args : Array[String]) -> Int32 {
         )
         report.exit_code()
       }
-      ["compare", base, current, policy, .. tail] if tail.is_empty() ||
-        tail == ["--markdown"] => {
+      ["compare", base, current, policy, .. tail] if tail
+        is ([]
+        | ["--markdown"]
+        | ["--require-same-structure"]
+        | ["--markdown", "--require-same-structure"]
+        | ["--require-same-structure", "--markdown"]) => {
         let report = @watch.compare(
           @watch.decode_capture(read_text(base)),
           @watch.decode_capture(read_text(current)),
           @watch.decode_policy(read_text(policy)),
+          require_same_structure=tail.contains("--require-same-structure"),
         )
         @stdio.stdout.text.write(
-          (if tail.is_empty() {
-            report.to_json()
-          } else {
+          (if tail.contains("--markdown") {
             report.to_markdown()
+          } else {
+            report.to_json()
           }) +
           "\n",
         )

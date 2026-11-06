@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn compare(Capture, Capture, Policy) -> Report
+pub fn compare(Capture, Capture, Policy, require_same_structure? : Bool) -> Report
 
 pub fn decode_capture(String) -> Capture raise InputError
 

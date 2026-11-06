@@ -114,12 +114,13 @@ fn budget(
 }
 
 ///|
-/// Compare declared equivalent captures. Structural changes are observations;
-/// violations are determined exclusively by the current capture's policy.
+/// Compare declared equivalent captures. By default structural changes are
+/// observations. Set require_same_structure to treat them as violations.
 pub fn compare(
   baseline : Capture,
   current : Capture,
   policy : Policy,
+  require_same_structure~ : Bool = false,
 ) -> Report {
   let report = evaluate(current, policy)
   let findings = report.findings.copy()
@@ -171,7 +172,11 @@ pub fn compare(
           (None, None) => "/0/Plan"
         }
         findings.push({
-          kind: Change,
+          kind: if require_same_structure {
+            Violation
+          } else {
+            Change
+          },
           code: "StructureChanged",
           path,
           message: "first preorder difference: " +

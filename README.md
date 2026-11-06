@@ -54,6 +54,10 @@ original whitespace, to a new file for use in other PostgreSQL tools.
 in JSON. It exits 0 for supported evidence, 3 for incomplete evidence, or 2 for
 invalid input.
 
+Use `compare --require-same-structure` when CI must enforce the same node paths,
+types, relations and index names as the baseline. A structural change then
+produces exit 1. Incompatible or incomplete evidence still produces exit 3.
+
 `capture` archives valid input even if its profile is incomplete; it does not run
 the policy gate. Gate commands emit reports on stdout for exits 0, 1 and 3;
 diagnostics for exit 2 go to stderr. File read, creation and write diagnostics

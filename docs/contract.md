@@ -78,10 +78,10 @@ fields that differ. Baseline limitations and context mismatch
 also cause exit 3. Equivalent contexts allow a `StructureChanged` observation
 when preorder node kind/path/relation/index identity differs. The report shows
 the first differing slot and its before/after node descriptions. Filter expressions,
-join conditions, cost, timing and index definitions are not compared. A structural
-change by itself is not a violation. Baseline metrics are not subtracted or used
-as implicit budgets. Regressions are defined by the caller's current explicit
-policy, not by guessed performance effects.
+join conditions, cost, timing and index definitions are outside the comparison.
+With `require_same_structure=true` or `--require-same-structure`, the same
+finding becomes a violation. Resource budgets still apply to the current
+capture's counters. Incomplete evidence takes precedence in both modes.
 
 Exit precedence is incomplete (3), violation (1), pass (0); parsing/I/O errors
 are separate (2 in CLI). Reports retain violations even when incomplete. Finding

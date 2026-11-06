@@ -50,6 +50,12 @@ async fn main {
   assert_true(failed.contains("SequentialScan") && failed.contains("StructureChanged"))
   let repeated = invoke(target, ["compare", base, current, index_policy], 1)
   assert_eq(failed, repeated)
+  let empty_policy = temp + "/empty-policy.json"
+  @fs.write_text(empty_policy, "{\"schema\":1}", create_mode=CreateNew)
+  let strict = invoke(target, ["compare", base, current, empty_policy, "--require-same-structure"], 1)
+  guard @json.parse(strict) is { "findings": [{ "code": String("StructureChanged"), "kind": String("violation"), .. }], .. } else { fail("Expected a structural violation") }
+  invoke(target, ["compare", base, base, empty_policy, "--require-same-structure"], 0) |> ignore
+  invoke(target, ["compare", base, temp + "/sort.json", empty_policy, "--require-same-structure"], 3) |> ignore
   let resources = invoke(target, ["check", temp + "/sort.json", "examples/policy-resources.json"], 1)
   assert_true(resources.contains("DiskSort") && resources.contains("BudgetExceeded"))
   let missing = invoke(target, ["check", base, "examples/policy-resources.json"], 3)
