@@ -24,6 +24,7 @@ Create a new `output` directory before these commands:
 moon run cmd/moonplanwatch -- --version
 moon run cmd/moonplanwatch -- capture examples/chinook/indexed.json examples/chinook/context.json --output output/base.json
 moon run cmd/moonplanwatch -- capture examples/chinook/sequential.json examples/chinook/context.json --output output/current.json
+moon run cmd/moonplanwatch -- inspect output/base.json
 moon run cmd/moonplanwatch -- check output/base.json examples/policy-index.json
 moon run cmd/moonplanwatch -- compare output/base.json output/current.json examples/policy-index.json --markdown
 ```
@@ -44,6 +45,10 @@ moon run scripts/e2e.mbtx wasm
 | 1 | Explicit policy violation |
 | 2 | Invalid input, unsupported envelope version, usage or I/O error |
 | 3 | Incomplete evidence; takes precedence over violations |
+
+`inspect` lists node paths, relation selectors, index names and capture limitations
+in JSON. It exits 0 for supported evidence, 3 for incomplete evidence, or 2 for
+invalid input.
 
 `capture` archives valid input even if its profile is incomplete; it does not run
 the policy gate. Gate commands emit reports on stdout for exits 0, 1 and 3;

@@ -23,6 +23,19 @@ async fn main {
   }
   let base = temp + "/base.json"
   let current = temp + "/current.json"
+  let inspected = invoke(target, ["inspect", base], 0)
+  guard @json.parse(inspected) is {
+    "mode": String("inspect"),
+    "nodes": [{ "kind": String("Index Scan"), "index_name": String(_), .. }],
+    "limitations": [],
+    ..
+  } else { fail("Inspect must identify the captured index scan") }
+  let unsupported = temp + "/unsupported.json"
+  @fs.write_text(unsupported, "[{\"Plan\":{\"Node Type\":\"Future Scan\"}}]", create_mode=CreateNew)
+  let incomplete = temp + "/incomplete.json"
+  invoke(target, ["capture", unsupported, fixtures + "/context.json", "--output", incomplete], 0) |> ignore
+  let inspected_incomplete = invoke(target, ["inspect", incomplete], 3)
+  assert_true(inspected_incomplete.contains("UnsupportedNode"))
   let index_policy = "examples/policy-index.json"
   let passed = invoke(target, ["check", base, index_policy], 0)
   let failed = invoke(target, ["compare", base, current, index_policy], 1)
@@ -46,6 +59,7 @@ async fn main {
   @fs.write_binary(temp + "/utf8.json", b"\xff", create_mode=CreateNew)
   invoke(target, ["check", temp + "/utf8.json", index_policy], 2) |> ignore
   invoke(target, ["check", temp + "/missing.json", index_policy], 2) |> ignore
+  invoke(target, ["inspect", temp + "/invalid.json"], 2) |> ignore
   assert_eq(invoke(target, ["check", base, index_policy], 0), passed)
   for (name, bytes) in originals { assert_eq(@fs.read_binary(fixtures + "/" + name), bytes) }
   println("E2E " + target + ": real index/seq/sort, exits 0/1/2/3, determinism, overwrite refusal, UTF-8 and recovery passed")
@@ -56,7 +70,7 @@ async fn invoke(target : String, args : Array[String], expected : Int) -> String
   command.append(args)
   let result = @shell.Cmd("moon", command).output(timeout_ms=180000, max_output_bytes=4194304)
   if result.exit_code() != expected { fail("CLI expected " + expected.to_string() + " got " + result.exit_code().to_string() + ": " + result.stderr() + result.stdout()) }
-  if expected == 1 || expected == 3 || (expected == 0 && args[0] == "check") {
+  if expected == 1 || expected == 3 || (expected == 0 && (args[0] == "check" || args[0] == "inspect")) {
     if !args.contains("--markdown") {
       guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("Report body disagrees with process exit") }
     }

@@ -30,6 +30,52 @@ async fn read_text(path : String) -> String {
 }
 
 ///|
+async fn inspect_capture(path : String) -> Int32 {
+  let capture = @watch.decode_capture(read_text(path))
+  let limitations = capture.limitations()
+  let code = if limitations.is_empty() { 0 } else { 3 }
+  let summary = Json::object({
+    "schema": Json::number(1),
+    "mode": Json::string("inspect"),
+    "query_id": Json::string(capture.context().query_id()),
+    "exit_code": Json::number(code.to_double()),
+    "nodes": Json::array(
+      capture
+      .nodes()
+      .map(node => {
+        Json::object({
+          "path": Json::string(node.path),
+          "kind": Json::string(node.kind),
+          "relation": node.relation
+          .map(r => {
+            Json::object({
+              "schema": Json::string(r.schema),
+              "name": Json::string(r.name),
+              "alias": Json::string(r.table_alias),
+            })
+          })
+          .unwrap_or(Json::null()),
+          "index_name": node.index_name
+          .map(name => Json::string(name))
+          .unwrap_or(Json::null()),
+        })
+      }),
+    ),
+    "limitations": Json::array(
+      limitations.map(diag => {
+        Json::object({
+          "code": Json::string(diag.code),
+          "path": Json::string(diag.path),
+          "message": Json::string(diag.message),
+        })
+      }),
+    ),
+  })
+  @stdio.stdout.text.write(summary.stringify() + "\n")
+  code
+}
+
+///|
 pub async fn run(args : Array[String]) -> Int32 {
   try {
     match args {
@@ -39,7 +85,7 @@ pub async fn run(args : Array[String]) -> Int32 {
       }
       ["--help"] => {
         @stdio.stdout.text.write(
-          "moonplanwatch 0.1.0\n  capture PLAN.json CONTEXT.json --output NEW.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
+          "moonplanwatch 0.1.0\n  capture PLAN.json CONTEXT.json --output NEW.json\n  inspect CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
         )
         0
       }
@@ -55,6 +101,7 @@ pub async fn run(args : Array[String]) -> Int32 {
         file.sync()
         0
       }
+      ["inspect", capture] => inspect_capture(capture)
       ["check", capture, policy, .. tail] if tail.is_empty() ||
         tail == ["--markdown"] => {
         let report = @watch.evaluate(
