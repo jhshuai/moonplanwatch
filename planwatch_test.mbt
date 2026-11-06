@@ -256,6 +256,33 @@ test "shared write budget uses exact inclusive root counts" {
 }
 
 ///|
+test "policy diagnostics point to the exact invalid access entry" {
+  let valid = "{\"schema\":\"public\",\"relation\":\"orders\",\"alias\":\"o\"}"
+  for
+    (entry, expected) in [
+      ("false", "/access/1"),
+      ("{\"a/b~c\":true}", "/access/1/a~1b~0c"),
+      (
+        "{\"schema\":\"public\",\"relation\":\"orders\",\"alias\":\"p\",\"allow_sequential\":0}",
+        "/access/1/allow_sequential",
+      ),
+      (valid, "/access/1"),
+    ] {
+    try {
+      ignore(
+        @moonplanwatch.decode_policy(
+          "{\"schema\":1,\"access\":[" + valid + "," + entry + "]}",
+        ),
+      )
+      fail("invalid rule accepted")
+    } catch {
+      @moonplanwatch.InputError::Invalid(diag) => assert_eq(diag.path, expected)
+      error => raise error
+    }
+  }
+}
+
+///|
 test "context mismatch prevents comparison" {
   let base = plan("{\"Node Type\":\"Result\"}")
   let other = @moonplanwatch.read_plan(base.source(), context(query="another"))

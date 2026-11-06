@@ -115,7 +115,7 @@ fn closed(
     if !keys.contains(key) {
       raise invalid(
         "UnknownField",
-        path + "/" + key,
+        path + "/" + pointer(key),
         "unknown configuration field",
       )
     }
@@ -179,23 +179,20 @@ pub fn decode_policy(source : String) -> Policy raise InputError {
       if entries.length() > 256 {
         raise invalid("PolicyLimit", "/access", "at most 256 access rules")
       }
-      for entry in entries {
-        let rule = object(entry, "/access")
-        closed(
-          rule,
-          ["schema", "relation", "alias", "allow_sequential"],
-          "/access",
-        )
+      for i, entry in entries {
+        let path = "/access/" + i.to_string()
+        let rule = object(entry, path)
+        closed(rule, ["schema", "relation", "alias", "allow_sequential"], path)
         rules.push({
           relation: {
-            schema: text(rule, "schema", "/access"),
-            name: text(rule, "relation", "/access"),
-            table_alias: text(rule, "alias", "/access"),
+            schema: text(rule, "schema", path),
+            name: text(rule, "relation", path),
+            table_alias: text(rule, "alias", path),
           },
           allow_sequential: boolean(
             rule,
             "allow_sequential",
-            "/access",
+            path,
             default=false,
           ),
         })

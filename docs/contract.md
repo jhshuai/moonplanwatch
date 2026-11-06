@@ -70,6 +70,9 @@ number of buffers dirtied and can vary with cache state.
 
 ## Comparison and reports
 
+Policy diagnostics use JSON Pointer paths such as
+`/access/1/allow_sequential` to identify the exact rule and field to edit.
+
 Current policy findings are preserved. Context mismatch diagnostics name the
 fields that differ. Baseline limitations and context mismatch
 also cause exit 3. Equivalent contexts allow a `StructureChanged` observation

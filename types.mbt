@@ -153,7 +153,8 @@ pub fn Policy::new(
     )
   }
   let seen : Set[String] = Set([])
-  for rule in access {
+  for i, rule in access {
+    let path = "/access/" + i.to_string()
     for
       value in [
         rule.relation.schema,
@@ -162,14 +163,14 @@ pub fn Policy::new(
       ] {
       if value.is_empty() || value.length() > 256 {
         raise invalid(
-          "RelationIdentity", "/access", "schema, name and alias must be nonempty and bounded",
+          "RelationIdentity", path, "schema, name and alias must be nonempty and bounded",
         )
       }
     }
     let key = relation_key(rule.relation)
     if seen.contains(key) {
       raise invalid(
-        "DuplicateRule", "/access", "each relation identity can have only one access rule",
+        "DuplicateRule", path, "each relation identity can have only one access rule",
       )
     }
     seen.add(key)
