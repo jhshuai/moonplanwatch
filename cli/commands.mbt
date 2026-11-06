@@ -30,6 +30,15 @@ async fn read_text(path : String) -> String {
 }
 
 ///|
+async fn write_new(path : String, source : String) -> Unit {
+  let file = @fs.open(path, mode=WriteOnly, create_mode=CreateNew)
+  errdefer @fs.remove(path)
+  defer file.close()
+  file.text.write(source)
+  file.sync()
+}
+
+///|
 async fn inspect_capture(path : String) -> Int32 {
   let capture = @watch.decode_capture(read_text(path))
   let limitations = capture.limitations()
@@ -85,7 +94,7 @@ pub async fn run(args : Array[String]) -> Int32 {
       }
       ["--help"] => {
         @stdio.stdout.text.write(
-          "moonplanwatch 0.1.0\n  capture PLAN.json CONTEXT.json --output NEW.json\n  inspect CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
+          "moonplanwatch 0.1.0\n  capture PLAN.json CONTEXT.json --output NEW.json\n  extract CAPTURE.json --output NEW_PLAN.json\n  inspect CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
         )
         0
       }
@@ -94,11 +103,12 @@ pub async fn run(args : Array[String]) -> Int32 {
           read_text(plan),
           @watch.decode_context(read_text(context)),
         )
-        let file = @fs.open(output, mode=WriteOnly, create_mode=CreateNew)
-        errdefer @fs.remove(output)
-        defer file.close()
-        file.text.write(capture.encode() + "\n")
-        file.sync()
+        write_new(output, capture.encode() + "\n")
+        0
+      }
+      ["extract", capture, "--output", output] => {
+        let evidence = @watch.decode_capture(read_text(capture))
+        write_new(output, evidence.source())
         0
       }
       ["inspect", capture] => inspect_capture(capture)

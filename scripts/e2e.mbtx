@@ -23,6 +23,11 @@ async fn main {
   }
   let base = temp + "/base.json"
   let current = temp + "/current.json"
+  let extracted = temp + "/extracted.json"
+  invoke(target, ["extract", base, "--output", extracted], 0) |> ignore
+  assert_eq(@fs.read_binary(extracted), originals["indexed.json"])
+  invoke(target, ["extract", current, "--output", extracted], 2) |> ignore
+  assert_eq(@fs.read_binary(extracted), originals["indexed.json"])
   let inspected = invoke(target, ["inspect", base], 0)
   guard @json.parse(inspected) is {
     "mode": String("inspect"),
@@ -36,6 +41,9 @@ async fn main {
   invoke(target, ["capture", unsupported, fixtures + "/context.json", "--output", incomplete], 0) |> ignore
   let inspected_incomplete = invoke(target, ["inspect", incomplete], 3)
   assert_true(inspected_incomplete.contains("UnsupportedNode"))
+  let restored = temp + "/restored-unsupported.json"
+  invoke(target, ["extract", incomplete, "--output", restored], 0) |> ignore
+  assert_eq(@fs.read_binary(restored), @fs.read_binary(unsupported))
   let index_policy = "examples/policy-index.json"
   let passed = invoke(target, ["check", base, index_policy], 0)
   let failed = invoke(target, ["compare", base, current, index_policy], 1)
