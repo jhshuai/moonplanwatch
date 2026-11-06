@@ -252,6 +252,26 @@ test "context mismatch prevents comparison" {
 }
 
 ///|
+test "structural comparison identifies a removed child" {
+  let before = plan(
+    "{\"Node Type\":\"Limit\",\"Plans\":[{\"Node Type\":\"Result\"}]}",
+  )
+  let after = plan("{\"Node Type\":\"Limit\"}")
+  let report = @moonplanwatch.compare(
+    before,
+    after,
+    @moonplanwatch.Policy::new(),
+  )
+  assert_eq(report.exit_code(), 0)
+  let findings = report.findings()
+  assert_eq(findings.length(), 1)
+  assert_eq(findings[0].path, "/0/Plan/Plans/0")
+  assert_true(
+    findings[0].message.contains("Result at /0/Plan/Plans/0 -> (absent)"),
+  )
+}
+
+///|
 test "snapshot arrays and input rules cannot mutate evidence" {
   let rules = [rule()]
   let policy = @moonplanwatch.Policy::new(access=rules)

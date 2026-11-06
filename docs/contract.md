@@ -68,7 +68,8 @@ Sort node's Sort Space Type; Memory passes, Disk violates, absence is incomplete
 Current policy findings are preserved. Context mismatch diagnostics name the
 fields that differ. Baseline limitations and context mismatch
 also cause exit 3. Equivalent contexts allow a `StructureChanged` observation
-when preorder node kind/path/relation/index identity differs. Filter expressions,
+when preorder node kind/path/relation/index identity differs. The report shows
+the first differing slot and its before/after node descriptions. Filter expressions,
 join conditions, cost, timing and index definitions are not compared. A structural
 change by itself is not a violation. Baseline metrics are not subtracted or used
 as implicit budgets. Regressions are defined by the caller's current explicit

@@ -148,18 +148,45 @@ pub fn compare(
       message: "capture declarations differ: " + changed.join(", "),
     })
   } else {
-    let before = baseline.nodes.map(node => node.info)
-    let after = current.nodes.map(node => node.info)
-    if before != after {
-      findings.push({
-        kind: Change,
-        code: "StructureChanged",
-        path: "/0/Plan",
-        message: "node order, access method, relation identity or index name changed; this does not establish a timing regression",
-      })
+    let before_count = baseline.nodes.length()
+    let after_count = current.nodes.length()
+    let count = if before_count > after_count {
+      before_count
+    } else {
+      after_count
+    }
+    for i in 0..<count {
+      let before = baseline.nodes.get(i).map(node => node.info)
+      let after = current.nodes.get(i).map(node => node.info)
+      if before != after {
+        let path = match (after, before) {
+          (Some(node), _) | (None, Some(node)) => node.path
+          (None, None) => "/0/Plan"
+        }
+        findings.push({
+          kind: Change,
+          code: "StructureChanged",
+          path,
+          message: "first preorder difference: " +
+          describe_node(before) +
+          " -> " +
+          describe_node(after),
+        })
+        break
+      }
     }
   }
   { findings, mode: "compare", query_id: current.context.query_id, }
+}
+
+///|
+fn describe_node(info : NodeInfo?) -> String {
+  guard info is Some(node) else { return "(absent)" }
+  let relation = node.relation.map(r => " " + relation_key(r)).unwrap_or("")
+  let index = node.index_name
+    .map(name => " index " + Json::string(name).stringify())
+    .unwrap_or("")
+  node.kind + " at " + node.path + relation + index
 }
 
 ///|
