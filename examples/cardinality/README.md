@@ -40,3 +40,14 @@ psql replaces files named by its output command.
 ```text
 psql -X -qAt -v before_file=fresh-before.json -v after_file=fresh-after.json -f examples/cardinality/reproduce.sql
 ```
+
+For automatic verification, set the standard PostgreSQL connection environment
+variables for the disposable server and run the same command used in CI. Create
+the parent of the destination first.
+
+```text
+moon run scripts/cardinality-e2e.mbtx psql output/cardinality-live
+```
+
+CI retains both generated plans and the context as the
+`postgres-cardinality-evidence` artifact.

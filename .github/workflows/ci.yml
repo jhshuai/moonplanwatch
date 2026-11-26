@@ -75,3 +75,13 @@ jobs:
             output/producer-e2e/failed/indexed.json
           if-no-files-found: warn
           retention-days: 7
+      - name: Reproduce cardinality change against live PostgreSQL
+        run: moon run scripts/cardinality-e2e.mbtx psql output/cardinality-live
+      - name: Preserve cardinality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-cardinality-evidence
+          path: output/cardinality-live/*.json
+          if-no-files-found: warn
+          retention-days: 7

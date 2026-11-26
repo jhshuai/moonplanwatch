@@ -58,7 +58,7 @@ async fn main {
   invoke(target, ["extract", legacy, "--output", legacy_plan], 0) |> ignore
   assert_eq(@fs.read_binary(legacy_plan), @fs.read_binary("examples/chinook/indexed.json"))
   let passed = invoke(target, ["check", base, index_policy], 0)
-  let cardinality_dir = "examples/cardinality/"
+  let cardinality_dir = @env.args().get(3).unwrap_or("examples/cardinality") + "/"
   for (name, expected) in [("before", "underestimated"), ("after", "consistent")] {
     let archive = temp + "/cardinality-" + name + ".json"
     invoke(target, ["capture", cardinality_dir + name + ".json", cardinality_dir + "context.json", "--output", archive], 0) |> ignore
