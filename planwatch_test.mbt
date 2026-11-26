@@ -331,6 +331,28 @@ test "nested-loop analysis requires unambiguous child roles" {
 }
 
 ///|
+test "rounded zero can hide output across many inner executions" {
+  let capture = plan(
+    "{\"Node Type\":\"Nested Loop\",\"Plan Rows\":1,\"Actual Rows\":4.00,\"Actual Loops\":1,\"Plans\":[{\"Node Type\":\"Result\",\"Parent Relationship\":\"Outer\",\"Plan Rows\":1000,\"Actual Rows\":1000.00,\"Actual Loops\":1},{\"Node Type\":\"Result\",\"Parent Relationship\":\"Inner\",\"Plan Rows\":1,\"Actual Rows\":0.00,\"Actual Loops\":1000}]}",
+  )
+  guard @moonplanwatch.analyze_cardinality(capture)
+    is {
+      "nested_loops": [
+        {
+          "inner_loops": Number(1000, ..),
+          "approx_inner_output_rows": Number(0, ..),
+          "inner_output_row_bounds": [Number(0, ..), Number(upper, ..)],
+          ..
+        },
+      ],
+      ..
+    } else {
+    fail("Expected a rounded-zero interval")
+  }
+  assert_true(upper >= 5.0 && upper < 6.0)
+}
+
+///|
 test "context mismatch prevents comparison" {
   let base = plan("{\"Node Type\":\"Result\"}")
   let other = @moonplanwatch.read_plan(base.source(), context(query="another"))

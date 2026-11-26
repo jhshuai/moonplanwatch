@@ -72,6 +72,30 @@ fn number_or_null(value : Double?) -> Json {
 }
 
 ///|
+fn observed_row_bounds(rows : RowEvidence) -> (Double, Double)? {
+  match (rows.actual, rows.loops) {
+    (Some(actual), Some(1.0)) if actual.to_int64().to_double() == actual =>
+      Some((actual, actual))
+    (Some(actual), Some(loops)) if loops > 1.0 => {
+      // PostgreSQL 18 prints the average with two fractional digits.
+      // Leave extra room for floating-point conversion and arithmetic.
+      let tolerance = 0.0051 + actual * 0.000000000000001
+      Some(
+        (
+          if actual > tolerance {
+            actual - tolerance
+          } else {
+            0.0
+          },
+          actual + tolerance,
+        ),
+      )
+    }
+    _ => None
+  }
+}
+
+///|
 fn analyze_node(
   plan : Json,
   path : String,
@@ -117,21 +141,12 @@ fn analyze_node(
     nested_loops.push(loop_report)
     incomplete = incomplete || partial
   }
-  let (status, factor) = match (rows.estimated, rows.actual, rows.loops) {
+  let bounds = observed_row_bounds(rows)
+  let (status, factor) = match (rows.estimated, bounds, rows.loops) {
     (_, _, Some(0.0)) => ("not_executed", None)
     _ if demand_limited => ("demand_limited", None)
     _ if kind == "Bitmap Index Scan" => ("bitmap_counters", None)
-    (Some(est), Some(actual), Some(loops)) if loops > 1.0 ||
-      actual.to_int64().to_double() == actual => {
-      // The displayed average is rounded. Only report differences that
-      // survive that uncertainty, with guard room for floating-point error.
-      let tolerance = if loops == 1.0 {
-        0.0
-      } else {
-        0.0051 + actual * 0.000000000000001
-      }
-      let lower = if actual > tolerance { actual - tolerance } else { 0.0 }
-      let upper = actual + tolerance
+    (Some(est), Some((lower, upper)), _) =>
       if est < lower {
         ("underestimated", if est > 0.0 { Some(lower / est) } else { None })
       } else if est > upper {
@@ -139,7 +154,6 @@ fn analyze_node(
       } else {
         ("consistent", None)
       }
-    }
     _ => ("missing_or_invalid_metrics", None)
   }
   let error = status == "underestimated" || status == "overestimated"
@@ -190,9 +204,17 @@ fn analyze_nested_loop(
     _ => None
   }
   let inner_output = match (inner_rows.actual, inner_rows.loops) {
-    (Some(avg), Some(loops)) => Some(avg * loops)
     (_, Some(0.0)) => Some(0.0)
+    (Some(avg), Some(loops)) if observed_row_bounds(inner_rows) is Some(_) =>
+      Some(avg * loops)
     _ => None
+  }
+  let output_bounds = match
+    (observed_row_bounds(inner_rows), inner_rows.loops) {
+    (_, Some(0.0)) => Json::array([Json::number(0), Json::number(0)])
+    (Some((lower, upper)), Some(loops)) =>
+      Json::array([Json::number(lower * loops), Json::number(upper * loops)])
+    _ => Json::null()
   }
   let complete = invocations is Some(_) &&
     outer_rows.estimated is Some(_) &&
@@ -219,6 +241,7 @@ fn analyze_nested_loop(
       "inner_invocations_per_join_loop": number_or_null(invocations),
       "invocations_vs_outer_row_estimate": number_or_null(relative_to_estimate),
       "approx_inner_output_rows": number_or_null(inner_output),
+      "inner_output_row_bounds": output_bounds,
       "inner_index_searches": number_or_null(
         bounded_rows(inner_input.fields.get("Index Searches"), integral=true),
       ),

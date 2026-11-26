@@ -26,6 +26,10 @@ denominator is an outer-row reference, and the ratio describes a difference in
 estimated versus observed scale. The output separately reports approximate
 inner rows from the displayed average multiplied by inner loops. Repeated
 invocations, index searches and output rows measure different quantities.
+The `inner_output_row_bounds` interval carries the rounding allowance through
+the multiplication. A displayed average of 0.00 over 1,000 loops, for instance,
+can still represent several emitted rows. An unexecuted inner node has a zero
+interval. Missing or invalid observations yield a null interval.
 
 Analysis compares the observed rows per execution with the planner estimate.
 Repeated executions use an allowance for the printed two-decimal average.
