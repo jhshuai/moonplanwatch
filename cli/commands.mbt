@@ -117,7 +117,7 @@ async fn inspect_capture(path : String) -> Int32 {
 }
 
 ///|
-const VERSION = "0.2.0"
+const VERSION = "0.3.0"
 
 ///|
 pub async fn run(args : Array[String]) -> Int32 {

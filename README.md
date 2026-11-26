@@ -1,5 +1,11 @@
 # MoonPlanWatch
 
+Use `analyze` on a captured `EXPLAIN ANALYZE` plan to locate cardinality
+discrepancies and trace repeated execution inside Nested Loop joins. The
+[reproducible example](examples/cardinality/README.md) shows an estimate moving
+from 1 to 100 after adding dependency statistics while the observed row count
+and inner invocations stay at 100.
+
 An offline PostgreSQL 18 query-plan policy library and CLI, written in MoonBit.
 
 Database application developers repeatedly review `EXPLAIN` output after index,

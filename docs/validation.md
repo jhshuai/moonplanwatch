@@ -1,5 +1,12 @@
 # Verification record
 
+For 0.3.0, 26 tests passed locally on each of Wasm, Wasm-GC and JavaScript.
+The 0.3.0 ZIP produced by `moon package --list` was unpacked into a separate
+directory. Both the Wasm CLI end-to-end workflow and independent consumer
+passed there. The CLI workflow checks legacy capture extraction and both
+versions of the correlated-column example. The PostgreSQL CI job regenerates
+that example and retains the plans and context.
+
 For 0.2.0, `moon package --list` built the source ZIP. The Wasm end-to-end
 workflow passed from a separate directory unpacked from that ZIP. The workflow
 checks CLI and module version agreement, applies the current policy to an

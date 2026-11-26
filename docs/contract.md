@@ -1,4 +1,27 @@
-# Input and policy contract — 0.2.0
+# Input and policy contract — 0.3.0
+
+## Cardinality report
+
+`analyze CAPTURE.json` reports observed execution evidence for supported serial
+PostgreSQL 18 plans. Each node is reported after its children. A node is
+marked `deepest_confirmed` if its estimate falls outside the observation interval
+and its descendants contain no confirmed discrepancy. Use the marker as a
+starting point for investigation. It records neither a causal link nor a cost.
+
+The report compares `Plan Rows` with the displayed `Actual Rows` per execution.
+Counts must be nonnegative and within the analysis range of 2^48. The report
+accounts for rounded averages when loops exceed one. Where a ratio would divide
+by zero, the factor is null and the status still records the direction.
+Unexecuted nodes, bitmap index counters and descendants of known early-stop
+operators receive distinct statuses. Unavailable metrics, unsupported plans
+and ambiguous join inputs return exit 3. Exit 0 indicates a report was produced
+within the supported scope, even when it contains confirmed discrepancies.
+
+Nested Loop input roles come from PostgreSQL's direct child relationships.
+The report separates observed inner executions, index searches and estimated
+output volume based on displayed averages. See the
+[live example](../examples/cardinality/README.md) for the meaning of the
+reported ratio and rounding bounds.
 
 ## Evidence
 
