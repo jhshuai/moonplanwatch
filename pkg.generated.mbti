@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn analyze_cardinality(Capture) -> @json.Json raise InputError
+
 pub fn compare(Capture, Capture, Policy, require_same_structure? : Bool) -> Report
 
 pub fn decode_capture(String) -> Capture raise InputError

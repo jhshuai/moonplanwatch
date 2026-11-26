@@ -75,6 +75,9 @@ identify the affected path. Never convert a nonzero gate to success in CI.
 
 ## Three workflows
 
+The [cardinality example](examples/cardinality/README.md) shows how extended
+statistics change an estimate on correlated columns.
+
 1. **Index migration review:** capture the same selective track lookup before and
    after dropping the demo index. Declare the same query/parameters/data/settings
    context, select `moonplanwatch_demo.track` with alias `track`, and forbid its

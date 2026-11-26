@@ -298,6 +298,24 @@ test "standalone context encoding preserves all identity fields" {
 }
 
 ///|
+test "cardinality analysis distinguishes early stop and unexecuted nodes" {
+  let capture = plan(
+    "{\"Node Type\":\"Limit\",\"Plan Rows\":1,\"Actual Rows\":1.00,\"Actual Loops\":1,\"Plans\":[{\"Node Type\":\"Append\",\"Plan Rows\":100,\"Actual Rows\":1.00,\"Actual Loops\":1,\"Plans\":[{\"Node Type\":\"Result\",\"Plan Rows\":100,\"Actual Rows\":0.00,\"Actual Loops\":0}]}]}",
+  )
+  assert_true(
+    @moonplanwatch.analyze_cardinality(capture)
+    is {
+      "nodes": [
+        { "status": String("not_executed"), .. },
+        { "status": String("demand_limited"), .. },
+        { "status": String("consistent"), .. },
+      ],
+      ..
+    },
+  )
+}
+
+///|
 test "context mismatch prevents comparison" {
   let base = plan("{\"Node Type\":\"Result\"}")
   let other = @moonplanwatch.read_plan(base.source(), context(query="another"))

@@ -17,7 +17,7 @@ async fn main {
   @fs.mkdir(library)
   @fs.mkdir(consumer)
   // Explicit source allowlist; never imports this workspace's build/cache state.
-  for name in ["moon.mod", "moon.pkg", "types.mbt", "traits.mbt", "json_input.mbt", "capture.mbt", "evaluate.mbt"] {
+  for name in ["moon.mod", "moon.pkg", "types.mbt", "traits.mbt", "json_input.mbt", "capture.mbt", "evaluate.mbt", "analysis.mbt"] {
     @fs.write_binary(library + "/" + name, @fs.read_binary(name), create_mode=CreateNew)
   }
   for name in ["moon.mod", "moon.pkg", "main.mbt"] {

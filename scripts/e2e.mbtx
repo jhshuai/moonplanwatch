@@ -58,6 +58,18 @@ async fn main {
   invoke(target, ["extract", legacy, "--output", legacy_plan], 0) |> ignore
   assert_eq(@fs.read_binary(legacy_plan), @fs.read_binary("examples/chinook/indexed.json"))
   let passed = invoke(target, ["check", base, index_policy], 0)
+  let cardinality_dir = "examples/cardinality/"
+  for (name, expected) in [("before", "underestimated"), ("after", "consistent")] {
+    let archive = temp + "/cardinality-" + name + ".json"
+    invoke(target, ["capture", cardinality_dir + name + ".json", cardinality_dir + "context.json", "--output", archive], 0) |> ignore
+    let analysis = invoke(target, ["analyze", archive], 0)
+    guard @json.parse(analysis) is {
+      "nodes": [{ "path": String("/0/Plan/Plans/0"), "status": String(status), "estimated_rows_per_loop": Number(estimate, ..), "actual_rows_per_loop": Number(100, ..), .. }, ..],
+      ..
+    } && status == expected && estimate == (if name == "before" { 1.0 } else { 100.0 }) else { fail("Unexpected correlated-data diagnosis: " + analysis) }
+  }
+  let analysis_missing = invoke(target, ["analyze", base], 3)
+  assert_true(analysis_missing.contains("missing_or_invalid_metrics"))
   let failed = invoke(target, ["compare", base, current, index_policy], 1)
   assert_true(failed.contains("SequentialScan") && failed.contains("StructureChanged"))
   let repeated = invoke(target, ["compare", base, current, index_policy], 1)

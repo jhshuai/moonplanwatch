@@ -131,7 +131,7 @@ pub async fn run(args : Array[String]) -> Int32 {
         @stdio.stdout.text.write(
           "moonplanwatch " +
           VERSION +
-          "\n  capture PLAN.json CONTEXT.json --output NEW.json\n  extract CAPTURE.json --output NEW_PLAN.json\n  inspect CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown] [--require-same-structure]\nExit: 0 pass, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
+          "\n  capture PLAN.json CONTEXT.json --output NEW.json\n  extract CAPTURE.json --output NEW_PLAN.json\n  inspect CAPTURE.json\n  analyze CAPTURE.json\n  check CAPTURE.json POLICY.json [--markdown]\n  compare BASE.json CURRENT.json POLICY.json [--markdown] [--require-same-structure]\nExit: 0 success, 1 policy violation, 2 invalid input/I/O, 3 incomplete.\n",
         )
         0
       }
@@ -149,6 +149,17 @@ pub async fn run(args : Array[String]) -> Int32 {
         0
       }
       ["inspect", capture] => inspect_capture(capture)
+      ["analyze", path] => {
+        let report = @watch.analyze_cardinality(
+          @watch.decode_capture(read_text(path)),
+        )
+        @stdio.stdout.text.write(report.stringify() + "\n")
+        if report is { "exit_code": Number(3, ..), .. } {
+          3
+        } else {
+          0
+        }
+      }
       ["check", capture, policy, .. tail] if tail.is_empty() ||
         tail == ["--markdown"] => {
         let report = @watch.evaluate(
