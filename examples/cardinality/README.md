@@ -18,6 +18,15 @@ confirmed discrepancy. The join reports the gap at its own output. The marker
 identifies where to investigate. The controlled statistics change provides
 additional evidence about the cause in this example.
 
+The Nested Loop evidence pairs the immediate Outer and Inner children by their
+PostgreSQL role. Both captures record 100 inner invocations and 100 index
+searches. Dividing observed inner invocations per join execution by the outer
+row estimate gives 100 before the statistics change and 1 after it. The
+denominator is an outer-row reference, and the ratio describes a difference in
+estimated versus observed scale. The output separately reports approximate
+inner rows from the displayed average multiplied by inner loops. Repeated
+invocations, index searches and output rows measure different quantities.
+
 Analysis compares the observed rows per execution with the planner estimate.
 Repeated executions use an allowance for the printed two-decimal average.
 Unexecuted nodes, bitmap index counters and descendants of known early-stop

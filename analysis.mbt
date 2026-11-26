@@ -6,6 +6,13 @@ priv struct RowEvidence {
 }
 
 ///|
+priv struct JoinInput {
+  path : String
+  fields : Map[String, Json]
+  rows : RowEvidence
+}
+
+///|
 fn bounded_rows(value : Json?, integral~ : Bool) -> Double? {
   match value {
     Some(Number(n, ..)) if n >= 0.0 &&
@@ -29,12 +36,15 @@ fn row_evidence(fields : Map[String, Json]) -> RowEvidence {
 /// discrepancies. InputError concerns capture decoding, not missing metrics.
 pub fn analyze_cardinality(capture : Capture) -> Json raise InputError {
   let findings : Array[Json] = []
+  let nested_loops : Array[Json] = []
   let mut incomplete = !capture.limitations.is_empty()
   if !incomplete {
     guard strict_json(capture.source) is Array([{ "Plan": plan, .. }]) else {
       raise invalid("MissingPlan", "/0/Plan", "capture requires a plan")
     }
-    let (_, partial, _) = analyze_node(plan, "/0/Plan", false, findings)
+    let (_, partial, _) = analyze_node(
+      plan, "/0/Plan", false, findings, nested_loops,
+    )
     incomplete = partial
   }
   Json::object({
@@ -43,6 +53,7 @@ pub fn analyze_cardinality(capture : Capture) -> Json raise InputError {
     "exit_code": Json::number(if incomplete { 3 } else { 0 }),
     "query_id": Json::string(capture.context.query_id),
     "nodes": Json::array(findings),
+    "nested_loops": Json::array(nested_loops),
     "limitations": Json::array(
       capture.limitations.map(diag => {
         Json::object({
@@ -66,6 +77,7 @@ fn analyze_node(
   path : String,
   demand_limited : Bool,
   findings : Array[Json],
+  nested_loops : Array[Json],
 ) -> (Bool, Bool, RowEvidence) raise InputError {
   let fields = object(plan, path)
   let kind = text(fields, "Node Type", path)
@@ -75,17 +87,35 @@ fn analyze_node(
     fields.get("Join Type") is Some(String("Semi" | "Anti"))
   let mut descendant_error = false
   let mut incomplete = false
+  let outer : Array[JoinInput] = []
+  let inner : Array[JoinInput] = []
   if fields.get("Plans") is Some(Array(children)) {
     for i, child in children {
-      let (error, partial, _) = analyze_node(
-        child,
-        path + "/Plans/" + i.to_string(),
-        child_limit,
-        findings,
+      let child_path = path + "/Plans/" + i.to_string()
+      let (error, partial, child_rows) = analyze_node(
+        child, child_path, child_limit, findings, nested_loops,
       )
+      if kind == "Nested Loop" {
+        let child_fields = object(child, child_path)
+        let input = JoinInput::{
+          path: child_path,
+          fields: child_fields,
+          rows: child_rows,
+        }
+        match child_fields.get("Parent Relationship") {
+          Some(String("Outer")) => outer.push(input)
+          Some(String("Inner")) => inner.push(input)
+          _ => ()
+        }
+      }
       descendant_error = descendant_error || error
       incomplete = incomplete || partial
     }
+  }
+  if kind == "Nested Loop" && rows.loops != Some(0.0) {
+    let (loop_report, partial) = analyze_nested_loop(path, rows, outer, inner)
+    nested_loops.push(loop_report)
+    incomplete = incomplete || partial
   }
   let (status, factor) = match (rows.estimated, rows.actual, rows.loops) {
     (_, _, Some(0.0)) => ("not_executed", None)
@@ -129,5 +159,70 @@ fn analyze_node(
     error || descendant_error,
     incomplete || status == "missing_or_invalid_metrics",
     rows,
+  )
+}
+
+///|
+fn analyze_nested_loop(
+  path : String,
+  join : RowEvidence,
+  outer : Array[JoinInput],
+  inner : Array[JoinInput],
+) -> (Json, Bool) {
+  guard outer is [outer_input] && inner is [inner_input] else {
+    return (
+      Json::object({
+        "path": Json::string(path),
+        "status": Json::string("ambiguous_join_roles"),
+      }),
+      true,
+    )
+  }
+  let outer_rows = outer_input.rows
+  let inner_rows = inner_input.rows
+  let invocations = match (inner_rows.loops, join.loops) {
+    (Some(child), Some(parent)) if parent > 0.0 => Some(child / parent)
+    _ => None
+  }
+  let relative_to_estimate = match (invocations, outer_rows.estimated) {
+    (Some(observed), Some(estimated)) if estimated > 0.0 =>
+      Some(observed / estimated)
+    _ => None
+  }
+  let inner_output = match (inner_rows.actual, inner_rows.loops) {
+    (Some(avg), Some(loops)) => Some(avg * loops)
+    (_, Some(0.0)) => Some(0.0)
+    _ => None
+  }
+  let complete = invocations is Some(_) &&
+    outer_rows.estimated is Some(_) &&
+    outer_rows.actual is Some(_) &&
+    outer_rows.loops is Some(_) &&
+    inner_output is Some(_)
+  (
+    Json::object({
+      "path": Json::string(path),
+      "status": Json::string(
+        if complete {
+          "observed"
+        } else {
+          "missing_or_invalid_metrics"
+        },
+      ),
+      "outer_path": Json::string(outer_input.path),
+      "inner_path": Json::string(inner_input.path),
+      "outer_estimated_rows_per_loop": number_or_null(outer_rows.estimated),
+      "outer_actual_rows_per_loop": number_or_null(outer_rows.actual),
+      "outer_loops": number_or_null(outer_rows.loops),
+      "join_loops": number_or_null(join.loops),
+      "inner_loops": number_or_null(inner_rows.loops),
+      "inner_invocations_per_join_loop": number_or_null(invocations),
+      "invocations_vs_outer_row_estimate": number_or_null(relative_to_estimate),
+      "approx_inner_output_rows": number_or_null(inner_output),
+      "inner_index_searches": number_or_null(
+        bounded_rows(inner_input.fields.get("Index Searches"), integral=true),
+      ),
+    }),
+    !complete,
   )
 }

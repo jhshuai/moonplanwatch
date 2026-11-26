@@ -67,6 +67,17 @@ async fn main {
       "nodes": [{ "path": String("/0/Plan/Plans/0"), "status": String(status), "estimated_rows_per_loop": Number(estimate, ..), "actual_rows_per_loop": Number(100, ..), .. }, ..],
       ..
     } && status == expected && estimate == (if name == "before" { 1.0 } else { 100.0 }) else { fail("Unexpected correlated-data diagnosis: " + analysis) }
+    guard @json.parse(analysis) is {
+      "nested_loops": [{
+        "outer_path": String("/0/Plan/Plans/0"),
+        "inner_path": String("/0/Plan/Plans/1"),
+        "inner_loops": Number(100, ..),
+        "inner_index_searches": Number(100, ..),
+        "invocations_vs_outer_row_estimate": Number(ratio, ..),
+        ..
+      }],
+      ..
+    } && ratio == (if name == "before" { 100.0 } else { 1.0 }) else { fail("Unexpected nested-loop evidence: " + analysis) }
   }
   let analysis_missing = invoke(target, ["analyze", base], 3)
   assert_true(analysis_missing.contains("missing_or_invalid_metrics"))

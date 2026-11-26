@@ -316,6 +316,21 @@ test "cardinality analysis distinguishes early stop and unexecuted nodes" {
 }
 
 ///|
+test "nested-loop analysis requires unambiguous child roles" {
+  let invalid_roles = plan(
+    "{\"Node Type\":\"Nested Loop\",\"Plan Rows\":1,\"Actual Rows\":1.00,\"Actual Loops\":1,\"Plans\":[{\"Node Type\":\"Result\",\"Parent Relationship\":\"Outer\",\"Plan Rows\":1,\"Actual Rows\":1.00,\"Actual Loops\":1}]}",
+  )
+  assert_true(
+    @moonplanwatch.analyze_cardinality(invalid_roles)
+    is {
+      "exit_code": Number(3, ..),
+      "nested_loops": [{ "status": String("ambiguous_join_roles"), .. }],
+      ..
+    },
+  )
+}
+
+///|
 test "context mismatch prevents comparison" {
   let base = plan("{\"Node Type\":\"Result\"}")
   let other = @moonplanwatch.read_plan(base.source(), context(query="another"))
